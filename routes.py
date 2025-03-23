@@ -506,6 +506,12 @@ def update_person(person_id):
 def delete_person(person_id):
     person = Person.query.filter_by(id=person_id, user_id=current_user.id).first_or_404()
     
+    # Delete associated connections first
+    PersonConnection.query.filter(
+        (PersonConnection.source_id == person_id) |
+        (PersonConnection.target_id == person_id)
+    ).delete(synchronize_session=False)
+    
     db.session.delete(person)
     db.session.commit()
     
