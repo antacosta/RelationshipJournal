@@ -386,6 +386,452 @@ function loadEmotionTimelineVisualization(personId) {
         });
 }
 
+// Load social web visualization
+function loadSocialWebVisualization() {
+    fetch('/api/visualizations/social-web')
+        .then(response => response.json())
+        .then(data => {
+            if (!data.nodes || data.nodes.length === 0) {
+                document.getElementById('social-web-container').innerHTML = 
+                    '<div class="text-center py-5">No data available. Add people and their relationships to see the social web.</div>';
+                return;
+            }
+            
+            const container = document.getElementById('social-web-container');
+            container.innerHTML = '<div id="social-web-graph" class="social-web-graph"></div>';
+            
+            // Create D3 force directed graph
+            createSocialWebGraph(data);
+        })
+        .catch(error => {
+            console.error('Error loading social web data:', error);
+            showAlert('Failed to load social web visualization', 'danger');
+        });
+}
+
+// Create D3 force directed graph for social web
+function createSocialWebGraph(data) {
+    const width = document.getElementById('social-web-graph').clientWidth;
+    const height = 500; // Fixed height
+    
+    // Create SVG element
+    const svg = d3.select('#social-web-graph')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', [0, 0, width, height])
+        .attr('class', 'social-web-svg');
+    
+    // Add zoom behavior
+    const zoom = d3.zoom()
+        .scaleExtent([0.5, 5])
+        .on('zoom', (event) => {
+            g.attr('transform', event.transform);
+        });
+    
+    svg.call(zoom);
+    
+    // Create container group for zoom
+    const g = svg.append('g');
+    
+    // Add arrow markers for directed links
+    g.append('defs').selectAll('marker')
+        .data(['positive', 'negative', 'neutral'])
+        .enter().append('marker')
+        .attr('id', d => `arrow-${d}`)
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 25)
+        .attr('refY', 0)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('fill', d => {
+            if (d === 'positive') return '#28a745';
+            if (d === 'negative') return '#dc3545';
+            return '#6c757d';
+        })
+        .attr('d', 'M0,-5L10,0L0,5');
+    
+    // Create the force simulation
+    const simulation = d3.forceSimulation(data.nodes)
+        .force('link', d3.forceLink(data.links).id(d => d.id).distance(100))
+        .force('charge', d3.forceManyBody().strength(-300))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide().radius(50));
+    
+    // Create links
+    const links = g.append('g')
+        .attr('class', 'links')
+        .selectAll('path')
+        .data(data.links)
+        .enter().append('path')
+        .attr('class', 'link')
+        .attr('stroke-width', d => Math.max(1, d.closeness || 1))
+        .attr('stroke', d => {
+            if (d.sentiment > 0.3) return '#28a745';  // Green for positive
+            if (d.sentiment < -0.3) return '#dc3545'; // Red for negative
+            return '#6c757d';                        // Gray for neutral
+        })
+        .attr('fill', 'none')
+        .attr('marker-end', d => {
+            if (d.sentiment > 0.3) return 'url(#arrow-positive)';
+            if (d.sentiment < -0.3) return 'url(#arrow-negative)';
+            return 'url(#arrow-neutral)';
+        })
+        .on('click', function(event, d) {
+            showRelationshipDetails(d);
+        });
+    
+    // Create nodes
+    const nodeGroups = g.append('g')
+        .attr('class', 'nodes')
+        .selectAll('g')
+        .data(data.nodes)
+        .enter().append('g')
+        .attr('class', 'node-group')
+        .call(d3.drag()
+            .on('start', dragstarted)
+            .on('drag', dragged)
+            .on('end', dragended));
+    
+    // Add node circles
+    nodeGroups.append('circle')
+        .attr('r', d => Math.max(10, Math.min(20, 10 + d.entry_count)))
+        .attr('fill', d => {
+            if (d.avg_sentiment > 0.3) return '#28a745';  // Green for positive
+            if (d.avg_sentiment < -0.3) return '#dc3545'; // Red for negative
+            return '#6c757d';                            // Gray for neutral
+        })
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 2)
+        .attr('data-person-id', d => d.id);
+    
+    // Add node labels
+    nodeGroups.append('text')
+        .attr('dy', 30)
+        .attr('text-anchor', 'middle')
+        .text(d => d.name)
+        .attr('class', 'node-label')
+        .attr('fill', '#fff')
+        .attr('data-person-id', d => d.id);
+    
+    // Add node interaction
+    nodeGroups.on('click', function(event, d) {
+        // Select person in dropdown
+        const personSelector = document.getElementById('person-selector');
+        if (personSelector) {
+            personSelector.value = d.id;
+            personSelector.dispatchEvent(new Event('change'));
+        }
+        
+        // Highlight node
+        highlightPersonInSocialWeb(d.id);
+        
+        // Show person details
+        showPersonDetails(d);
+    });
+    
+    // Define tick function for simulation
+    simulation.on('tick', () => {
+        links.attr('d', linkArc);
+        
+        nodeGroups.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+    
+    // Store simulation for later use
+    socialNetworkGraph = simulation;
+    
+    // Helper functions for drag behavior
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+    
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+    
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+    
+    // Function to create curved paths for links
+    function linkArc(d) {
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const dr = Math.sqrt(dx * dx + dy * dy);
+        return `M${d.source.x},${d.source.y} A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+    }
+}
+
+// Highlight a person in the social web visualization
+function highlightPersonInSocialWeb(personId) {
+    // Reset previous highlights
+    resetSocialWebHighlights();
+    
+    // Highlight selected person
+    d3.selectAll('.node-group circle')
+        .attr('stroke-width', function() {
+            return this.getAttribute('data-person-id') == personId ? 4 : 2;
+        })
+        .attr('stroke', function() {
+            return this.getAttribute('data-person-id') == personId ? '#ffc107' : '#fff';
+        });
+    
+    d3.selectAll('.node-group text')
+        .attr('font-weight', function() {
+            return this.getAttribute('data-person-id') == personId ? 'bold' : 'normal';
+        })
+        .attr('font-size', function() {
+            return this.getAttribute('data-person-id') == personId ? '14px' : '12px';
+        });
+    
+    // Highlight related links
+    d3.selectAll('.link')
+        .attr('stroke-opacity', function(d) {
+            return (d.source.id == personId || d.target.id == personId) ? 1.0 : 0.2;
+        })
+        .attr('stroke-width', function(d) {
+            const baseWidth = Math.max(1, d.closeness || 1);
+            return (d.source.id == personId || d.target.id == personId) ? baseWidth * 2 : baseWidth;
+        });
+    
+    // Highlight related nodes
+    d3.selectAll('.node-group')
+        .style('opacity', function(d) {
+            // Check all links to find connections
+            let isConnected = false;
+            d3.selectAll('.link').each(function(linkData) {
+                if ((linkData.source.id == personId && linkData.target.id == d.id) || 
+                    (linkData.target.id == personId && linkData.source.id == d.id)) {
+                    isConnected = true;
+                }
+            });
+            
+            return d.id == personId || isConnected ? 1.0 : 0.3;
+        });
+}
+
+// Reset highlights in the social web visualization
+function resetSocialWebHighlights() {
+    d3.selectAll('.node-group circle')
+        .attr('stroke-width', 2)
+        .attr('stroke', '#fff');
+    
+    d3.selectAll('.node-group text')
+        .attr('font-weight', 'normal')
+        .attr('font-size', '12px');
+    
+    d3.selectAll('.link')
+        .attr('stroke-opacity', 0.6)
+        .attr('stroke-width', d => Math.max(1, d.closeness || 1));
+    
+    d3.selectAll('.node-group')
+        .style('opacity', 1.0);
+}
+
+// Show person details
+function showPersonDetails(person) {
+    // Load person connections
+    fetch(`/api/visualizations/social-connections/${person.id}`)
+        .then(response => response.json())
+        .then(connections => {
+            const detailsContainer = document.getElementById('person-details-container');
+            
+            let connectionsHtml = '';
+            if (connections.length > 0) {
+                connectionsHtml = `
+                    <h5 class="mt-4">Connections (${connections.length})</h5>
+                    <div class="list-group">
+                `;
+                
+                connections.forEach(conn => {
+                    // Set sentiment class
+                    let sentimentClass = 'bg-secondary';
+                    if (conn.sentiment > 0.3) sentimentClass = 'bg-success';
+                    if (conn.sentiment < -0.3) sentimentClass = 'bg-danger';
+                    
+                    connectionsHtml += `
+                        <a href="#" class="list-group-item list-group-item-action" 
+                           onclick="event.preventDefault(); highlightPersonInSocialWeb(${conn.person_id});">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">${conn.person_name}</h6>
+                                <span class="badge ${sentimentClass}">${conn.relationship_type}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small>Interactions: ${conn.interaction_count}</small>
+                                <small>Closeness: ${conn.closeness}/10</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary mt-2" 
+                                    onclick="event.stopPropagation(); showEditRelationshipModal(${person.id}, ${conn.person_id})">
+                                Edit Relationship
+                            </button>
+                        </a>
+                    `;
+                });
+                
+                connectionsHtml += '</div>';
+            } else {
+                connectionsHtml = '<p class="text-muted">No connections found for this person.</p>';
+            }
+            
+            detailsContainer.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h4>${person.name}</h4>
+                        <span class="badge bg-info">${person.relationship_type}</span>
+                    </div>
+                    <div class="card-body">
+                        <p>Journal Entries: ${person.entry_count}</p>
+                        <p>Average Sentiment: ${person.avg_sentiment.toFixed(2)}</p>
+                        ${connectionsHtml}
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => {
+            console.error('Error loading person connections:', error);
+            showAlert('Failed to load person connections', 'danger');
+        });
+}
+
+// Show edit relationship modal
+function showEditRelationshipModal(sourceId, targetId) {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('edit-relationship-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'edit-relationship-modal';
+        modal.className = 'modal fade';
+        modal.setAttribute('tabindex', '-1');
+        modal.setAttribute('aria-labelledby', 'editRelationshipModalLabel');
+        modal.setAttribute('aria-hidden', 'true');
+        
+        modal.innerHTML = `
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editRelationshipModalLabel">Edit Relationship</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="relationship-form">
+                            <input type="hidden" id="source-person-id">
+                            <input type="hidden" id="target-person-id">
+                            
+                            <div class="mb-3">
+                                <label for="relationship-type" class="form-label">Relationship Type</label>
+                                <select class="form-select" id="relationship-type" required>
+                                    <option value="">Select type</option>
+                                    <option value="Friend">Friend</option>
+                                    <option value="Family">Family</option>
+                                    <option value="Colleague">Colleague</option>
+                                    <option value="Acquaintance">Acquaintance</option>
+                                    <option value="Dating">Dating</option>
+                                    <option value="Partner">Partner</option>
+                                    <option value="Spouse">Spouse</option>
+                                    <option value="Ex-Partner">Ex-Partner</option>
+                                    <option value="Mentor">Mentor</option>
+                                    <option value="Mentee">Mentee</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="closeness" class="form-label">Closeness (1-10)</label>
+                                <input type="range" class="form-range" id="closeness" min="1" max="10" value="5">
+                                <div class="d-flex justify-content-between">
+                                    <small>Distant</small>
+                                    <small>Close</small>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="relationship-notes" class="form-label">Notes</label>
+                                <textarea class="form-control" id="relationship-notes" rows="3"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="updatePersonConnection()">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+    
+    // Set source and target person IDs
+    document.getElementById('source-person-id').value = sourceId;
+    document.getElementById('target-person-id').value = targetId;
+    
+    // Show the modal
+    const modalInstance = new bootstrap.Modal(modal);
+    modalInstance.show();
+}
+
+// Update person connection
+function updatePersonConnection() {
+    const sourceId = document.getElementById('source-person-id').value;
+    const targetId = document.getElementById('target-person-id').value;
+    const relationshipType = document.getElementById('relationship-type').value;
+    const closeness = document.getElementById('closeness').value;
+    const notes = document.getElementById('relationship-notes').value;
+    
+    const connectionData = {
+        source_id: sourceId,
+        target_id: targetId,
+        relationship_type: relationshipType,
+        closeness: parseInt(closeness),
+        notes: notes
+    };
+    
+    fetch('/api/person-connections', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(connectionData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showAlert(data.error, 'danger');
+            return;
+        }
+        
+        showAlert('Relationship updated successfully!', 'success');
+        
+        // Close the modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('edit-relationship-modal'));
+        modal.hide();
+        
+        // Reload the social web
+        loadSocialWebVisualization();
+        
+        // Reload person details
+        const personSelector = document.getElementById('person-selector');
+        if (personSelector && personSelector.value) {
+            const personId = personSelector.value;
+            fetch(`/api/people/${personId}`)
+                .then(response => response.json())
+                .then(person => {
+                    showPersonDetails(person);
+                });
+        }
+    })
+    .catch(error => {
+        console.error('Error updating relationship:', error);
+        showAlert('Failed to update relationship', 'danger');
+    });
+}
+
 // Show alert message
 function showAlert(message, type) {
     const alertContainer = document.getElementById('alert-container');

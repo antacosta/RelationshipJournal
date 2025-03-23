@@ -44,7 +44,7 @@
 
 <div class="row">
     <!-- Emotion Timeline -->
-    <div class="col-12 mb-4">
+    <div class="col-lg-6 mb-4">
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Emotion Timeline</h5>
@@ -60,6 +60,57 @@
                     <canvas id="emotion-timeline-chart"></canvas>
                 </div>
                 <p class="text-muted small">This chart shows the emotional sentiment of your interactions with a selected person over time.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Person Details -->
+    <div class="col-lg-6 mb-4">
+        <div id="person-details-container">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Person Details</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-center text-muted">Select a person to view details and connections</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Social Web Visualization -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Social Web</h5>
+            </div>
+            <div class="card-body">
+                <div id="social-web-container" class="mb-3">
+                    <div id="social-web-graph" class="social-web-graph"></div>
+                </div>
+                <p class="text-muted small">This interactive visualization shows the relationships between people in your social network. Drag nodes to rearrange. Click on a person to view their connections.</p>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-success me-2">&nbsp;</span>
+                            <small>Positive Relationship</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-danger me-2">&nbsp;</span>
+                            <small>Negative Relationship</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-secondary me-2">&nbsp;</span>
+                            <small>Neutral Relationship</small>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -87,6 +138,12 @@
                     <dd>
                         <p>This timeline shows the emotional sentiment of your interactions with a specific person over time. Look for trends (improving or deteriorating), consistency, and emotional range to better understand your relationship dynamics.</p>
                     </dd>
+                    
+                    <dt>Social Web</dt>
+                    <dd>
+                        <p>This interactive network visualization shows how people in your life are connected to each other. The size of each node represents the number of journal entries that mention a person, and the colors indicate the average sentiment (green for positive, red for negative, gray for neutral). The lines between people represent their relationship types with arrows indicating the direction of the relationship.</p>
+                        <p>You can click on any person to see their details and connections, or drag nodes around to rearrange the network. This visualization helps you understand the dynamics of your social circles and how relationships are interconnected.</p>
+                    </dd>
                 </dl>
             </div>
         </div>
@@ -95,5 +152,7 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- D3.js for social web visualization -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="{{ url_for('static', filename='js/visualizations.js') }}"></script>
 {% endblock %}
