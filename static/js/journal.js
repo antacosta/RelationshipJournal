@@ -659,8 +659,7 @@ function processHighlighting(textarea) {
             const personColor = peopleColors[person.id] || '#3498db';
             highlightedHtml += `<span class="inline-person-highlight known" 
                                     data-person-id="${person.id}" 
-                                    style="background-color: ${personColor}33; border-bottom: 1px solid ${personColor};">
-                                ${escapeHtml(match[0])}</span>`;
+                                    style="background-color: ${personColor}33; border-bottom: 1px solid ${personColor};">${escapeHtml(match[0])}</span>`;
             
             // Update lastIndex to continue after this match
             lastIndex = match.index + match[0].length;
@@ -680,20 +679,20 @@ function processHighlighting(textarea) {
     tempDiv.innerHTML = highlightedHtml;
     const plainText = tempDiv.textContent;
     
-    // Find all potential new names
+    // Find all potential new names - including those at the start of sentences
     let newNameMatch;
     while ((newNameMatch = newNamesRegex.exec(plainText)) !== null) {
         const name = newNameMatch[0];
         const index = newNameMatch.index;
         
-        // Skip if this is at the start of a sentence
-        if (index > 0) {
-            const prevChar = plainText[index - 1];
-            if (['.', '!', '?', '\n'].includes(prevChar)) continue;
-        } else {
-            // Skip if this is at the beginning of the text (naturally capitalized)
-            continue;
-        }
+        // Check if this is a common word that's capitalized (like days, months, etc)
+        const commonWords = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+                           'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December',
+                           'The', 'This', 'That', 'These', 'Those', 'They', 'There', 'Today', 'Tomorrow', 'Yesterday'];
+        if (commonWords.includes(name)) continue;
+        
+        // We'll now detect names at the start of sentences too, but still check if it's at the start
+        const isStartOfSentence = index === 0 || (index > 0 && ['.', '!', '?', '\n'].includes(plainText[index - 1]));
         
         // Check if this name is already known (part of a highlight span)
         let isKnownName = false;
@@ -717,8 +716,7 @@ function processHighlighting(textarea) {
         // Only highlight if it's not inside an existing highlight span
         if (!isInsideHighlightSpan(highlightedHtml, htmlIndex)) {
             // Add the highlighted name
-            newHighlightedHtml += `<span class="inline-person-highlight new">
-                                   ${escapeHtml(name)}</span>`;
+            newHighlightedHtml += `<span class="inline-person-highlight new">${escapeHtml(name)}</span>`;
             
             // Update lastIndex to continue after this match
             lastIndex = htmlIndex + name.length;
