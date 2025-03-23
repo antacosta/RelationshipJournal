@@ -367,27 +367,14 @@ function filterJournalEntries(searchTerm) {
     });
 }
 
-// Handle highlighting names in realtime as user types
+// This function is now replaced by processHighlighting in our enhanced text editor approach
+// Kept as a legacy function for compatibility with any code that might still call it
 function highlightNamesInRealtime(content) {
-    // Only perform this if we have a preview element
-    const previewElement = document.getElementById('content-preview');
-    if (!previewElement) return;
-    
-    // Get all people from our dropdown
-    const peopleOptions = Array.from(peopleDropdown.options);
-    const peopleNames = peopleOptions.map(option => option.textContent);
-    
-    // Create a temporary copy of content for highlighting
-    let highlightedContent = content;
-    
-    // Highlight existing people names
-    peopleNames.forEach(name => {
-        if (name && name.length > 0 && content.includes(name)) {
-            const regex = new RegExp(`\\b${name}\\b`, 'gi');
-            const personId = peopleOptions.find(option => option.textContent === name)?.value;
-            
-            if (personId) {
-                highlightedContent = highlightedContent.replace(
+    // We now use the processHighlighting function with our enhanced text editor approach
+    const contentTextarea = document.getElementById('content');
+    if (contentTextarea) {
+        processHighlighting(contentTextarea);
+    }
                     regex, 
                     `<span class="person-highlight known" data-person-id="${personId}">${name}</span>`
                 );
