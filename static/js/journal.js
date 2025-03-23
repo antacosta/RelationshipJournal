@@ -4,6 +4,8 @@ let journalEntriesList;
 let peopleDropdown;
 let editingEntryId = null;
 let nameRecognitionEnabled = true; // Enable name recognition by default
+let peopleColors = {}; // Store custom colors for people
+let allPeople = []; // Store all people data
 
 // Initialize journal page
 document.addEventListener('DOMContentLoaded', function() {
@@ -14,8 +16,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load journal entries
     loadJournalEntries();
     
-    // Load people for dropdown
-    loadPeopleForDropdown();
+    // Load people for dropdown and store for highlighting
+    loadPeopleWithColors();
     
     // Set up form submission
     journalForm.addEventListener('submit', handleJournalFormSubmit);
@@ -34,18 +36,22 @@ document.addEventListener('DOMContentLoaded', function() {
     if (nameRecognitionToggle) {
         nameRecognitionToggle.addEventListener('change', function() {
             nameRecognitionEnabled = this.checked;
-        });
-    }
-    
-    // Set up content textarea to show realtime name highlighting
-    const contentTextarea = document.getElementById('content');
-    if (contentTextarea) {
-        contentTextarea.addEventListener('input', function() {
-            if (nameRecognitionEnabled) {
-                highlightNamesInRealtime(this.value);
+            const contentTextarea = document.getElementById('content');
+            if (contentTextarea) {
+                if (nameRecognitionEnabled) {
+                    enableInlineHighlighting(contentTextarea);
+                } else {
+                    disableInlineHighlighting(contentTextarea);
+                }
             }
         });
     }
+    
+    // Set up content textarea with enhanced inline highlighting
+    setupEnhancedTextEditor();
+    
+    // Initialize the sentiment gradient bar
+    initSentimentGradientBar();
 });
 
 // Load all journal entries
@@ -166,6 +172,57 @@ function loadPeopleForDropdown() {
         })
         .catch(error => {
             console.error('Error loading people:', error);
+        });
+}
+
+// Load people with colors for highlighting
+function loadPeopleWithColors() {
+    fetch('/api/people')
+        .then(response => response.json())
+        .then(people => {
+            // Store all people data for later use
+            allPeople = people;
+            
+            // Populate dropdown (can be called separately if needed)
+            peopleDropdown.innerHTML = '';
+            
+            // Generate default colors or load saved ones
+            people.forEach((person, index) => {
+                // Assign default color if none exists
+                if (!peopleColors[person.id]) {
+                    // Generate colors from a pleasing palette
+                    const colorPalette = [
+                        '#9b59b6', // Purple
+                        '#3498db', // Blue
+                        '#2ecc71', // Green
+                        '#f1c40f', // Yellow
+                        '#e67e22', // Orange
+                        '#e74c3c', // Red
+                        '#1abc9c', // Turquoise
+                        '#34495e'  // Dark Blue
+                    ];
+                    
+                    // Assign color from palette (cycle through if more people than colors)
+                    peopleColors[person.id] = colorPalette[index % colorPalette.length];
+                }
+                
+                // Add to dropdown
+                const option = document.createElement('option');
+                option.value = person.id;
+                option.textContent = person.name;
+                option.style.backgroundColor = peopleColors[person.id] + '33'; // Add transparency
+                peopleDropdown.appendChild(option);
+            });
+            
+            // Initialize text editor highlighting after loading people
+            const contentTextarea = document.getElementById('content');
+            if (contentTextarea && nameRecognitionEnabled) {
+                enableInlineHighlighting(contentTextarea);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading people:', error);
+            showAlert('Failed to load people data', 'danger');
         });
 }
 
@@ -528,6 +585,635 @@ function createNewPersonModal() {
     
     document.body.appendChild(modalElement);
     return modalElement;
+}
+
+// Set up enhanced text editor with inline name highlighting
+function setupEnhancedTextEditor() {
+    const contentTextarea = document.getElementById('content');
+    if (!contentTextarea) return;
+    
+    // Create content overlay div for inline highlighting
+    const editorContainer = document.createElement('div');
+    editorContainer.className = 'editor-container';
+    editorContainer.style.position = 'relative';
+    contentTextarea.parentNode.insertBefore(editorContainer, contentTextarea);
+    editorContainer.appendChild(contentTextarea);
+    
+    // Add inline highlight overlay
+    const highlightOverlay = document.createElement('div');
+    highlightOverlay.className = 'editor-highlight-overlay';
+    highlightOverlay.style.position = 'absolute';
+    highlightOverlay.style.top = '0';
+    highlightOverlay.style.left = '0';
+    highlightOverlay.style.right = '0';
+    highlightOverlay.style.bottom = '0';
+    highlightOverlay.style.pointerEvents = 'none';
+    highlightOverlay.style.padding = '0.375rem 0.75rem'; // Match bootstrap form-control padding
+    highlightOverlay.style.overflow = 'hidden';
+    highlightOverlay.style.whiteSpace = 'pre-wrap';
+    highlightOverlay.style.wordWrap = 'break-word';
+    editorContainer.appendChild(highlightOverlay);
+    
+    // Create suggestion popup for highlighted names
+    const nameSuggestionPopup = document.createElement('div');
+    nameSuggestionPopup.className = 'name-suggestion-popup card shadow';
+    nameSuggestionPopup.style.position = 'absolute';
+    nameSuggestionPopup.style.display = 'none';
+    nameSuggestionPopup.style.zIndex = '1000';
+    nameSuggestionPopup.style.maxWidth = '300px';
+    document.body.appendChild(nameSuggestionPopup);
+    
+    // Enable inline highlighting
+    if (nameRecognitionEnabled) {
+        enableInlineHighlighting(contentTextarea);
+    }
+    
+    // Content textarea input handler for realtime analysis
+    contentTextarea.addEventListener('input', function() {
+        // Update sentiment analysis display
+        updateSentimentAnalysis(this.value);
+        
+        // Skip highlighting if disabled
+        if (!nameRecognitionEnabled) return;
+        
+        // Update the highlighting overlay
+        processHighlighting(this);
+    });
+    
+    // Click handler to show popup when clicking on highlighted name
+    document.addEventListener('click', function(e) {
+        // Check if we clicked on a highlighted name
+        if (e.target.matches('.inline-person-highlight')) {
+            e.preventDefault();
+            
+            const name = e.target.textContent;
+            const isNew = e.target.classList.contains('new');
+            
+            // Position popup near the highlighted name
+            nameSuggestionPopup.style.left = e.pageX + 'px';
+            nameSuggestionPopup.style.top = e.pageY + 'px';
+            
+            if (isNew) {
+                // Show options for creating or matching this new name
+                showNewNameOptions(name, nameSuggestionPopup);
+            } else {
+                // Show existing person details
+                const personId = e.target.dataset.personId;
+                showPersonSuggestionDetails(personId, nameSuggestionPopup);
+            }
+            
+            // Show the popup
+            nameSuggestionPopup.style.display = 'block';
+        } else if (!e.target.closest('.name-suggestion-popup')) {
+            // Hide popup when clicking elsewhere
+            nameSuggestionPopup.style.display = 'none';
+        }
+    });
+}
+
+// Process highlighting in the textarea
+function processHighlighting(textarea) {
+    const highlightOverlay = textarea.parentNode.querySelector('.editor-highlight-overlay');
+    if (!highlightOverlay) return;
+    
+    // Get text and adjust highlightOverlay to match textarea dimensions
+    const text = textarea.value;
+    highlightOverlay.style.width = textarea.clientWidth + 'px';
+    highlightOverlay.style.height = textarea.clientHeight + 'px';
+    
+    // Process the text for highlighting
+    let highlightedHtml = '';
+    let lastIndex = 0;
+    
+    // Find and highlight known people
+    allPeople.forEach(person => {
+        if (!person.name || person.name.length < 2) return;
+        
+        // Create a regex to find the name with word boundaries
+        const regex = new RegExp(`\\b${escapeRegExp(person.name)}\\b`, 'g');
+        let match;
+        
+        // Start search from beginning of text
+        regex.lastIndex = 0;
+        
+        // Find all matches
+        while ((match = regex.exec(text)) !== null) {
+            // Add text before the match
+            highlightedHtml += escapeHtml(text.substring(lastIndex, match.index));
+            
+            // Add the highlighted name with custom color
+            const personColor = peopleColors[person.id] || '#3498db';
+            highlightedHtml += `<span class="inline-person-highlight known" 
+                                    data-person-id="${person.id}" 
+                                    style="background-color: ${personColor}33; border-bottom: 1px solid ${personColor};">
+                                ${escapeHtml(match[0])}</span>`;
+            
+            // Update lastIndex to continue after this match
+            lastIndex = match.index + match[0].length;
+        }
+    });
+    
+    // Add the remaining text after the last match
+    highlightedHtml += escapeHtml(text.substring(lastIndex));
+    
+    // Now look for potential new names (capitalized words) that aren't already highlighted
+    const newNamesRegex = /\b[A-Z][a-z]+\b/g;
+    let newHighlightedHtml = '';
+    lastIndex = 0;
+    
+    // Use a temporary div to parse the HTML without actually adding it to the DOM
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = highlightedHtml;
+    const plainText = tempDiv.textContent;
+    
+    // Find all potential new names
+    let newNameMatch;
+    while ((newNameMatch = newNamesRegex.exec(plainText)) !== null) {
+        const name = newNameMatch[0];
+        const index = newNameMatch.index;
+        
+        // Skip if this is at the start of a sentence
+        if (index > 0) {
+            const prevChar = plainText[index - 1];
+            if (['.', '!', '?', '\n'].includes(prevChar)) continue;
+        } else {
+            // Skip if this is at the beginning of the text (naturally capitalized)
+            continue;
+        }
+        
+        // Check if this name is already known (part of a highlight span)
+        let isKnownName = false;
+        for (const person of allPeople) {
+            if (person.name === name) {
+                isKnownName = true;
+                break;
+            }
+        }
+        
+        // Skip if it's already a known name
+        if (isKnownName) continue;
+        
+        // Find the HTML index for this plain text index
+        let htmlIndex = findHtmlIndexForTextIndex(highlightedHtml, index);
+        if (htmlIndex === -1) continue;
+        
+        // Add text before the match
+        newHighlightedHtml += highlightedHtml.substring(lastIndex, htmlIndex);
+        
+        // Only highlight if it's not inside an existing highlight span
+        if (!isInsideHighlightSpan(highlightedHtml, htmlIndex)) {
+            // Add the highlighted name
+            newHighlightedHtml += `<span class="inline-person-highlight new">
+                                   ${escapeHtml(name)}</span>`;
+            
+            // Update lastIndex to continue after this match
+            lastIndex = htmlIndex + name.length;
+        } else {
+            // If inside an existing span, just keep the original HTML
+            newHighlightedHtml += highlightedHtml.substring(htmlIndex, htmlIndex + name.length);
+            lastIndex = htmlIndex + name.length;
+        }
+    }
+    
+    // Add the remaining HTML after the last match
+    newHighlightedHtml += highlightedHtml.substring(lastIndex);
+    
+    // Set the highlighted HTML
+    highlightOverlay.innerHTML = newHighlightedHtml || highlightedHtml;
+    
+    // Adjust scroll position of highlight overlay to match textarea
+    highlightOverlay.scrollTop = textarea.scrollTop;
+}
+
+// Helper function to escape HTML entities
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Helper function to escape special regex characters
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Helper to find HTML index for a given plain text index
+function findHtmlIndexForTextIndex(html, textIndex) {
+    // This is a simplified approximation - a more robust solution would use a proper HTML parser
+    let plainIndex = 0;
+    let htmlIndex = 0;
+    let inTag = false;
+    
+    while (htmlIndex < html.length && plainIndex < textIndex) {
+        if (html[htmlIndex] === '<') {
+            inTag = true;
+        } else if (html[htmlIndex] === '>') {
+            inTag = false;
+        } else if (!inTag) {
+            plainIndex++;
+        }
+        
+        htmlIndex++;
+    }
+    
+    // If we couldn't reach the text index, return -1
+    if (plainIndex < textIndex) return -1;
+    
+    // Adjust if we ended up inside a tag
+    while (htmlIndex < html.length && html[htmlIndex] !== '<' && html[htmlIndex-1] !== '>') {
+        htmlIndex++;
+    }
+    
+    return htmlIndex;
+}
+
+// Helper to check if a position is inside a highlight span
+function isInsideHighlightSpan(html, position) {
+    // Find the last opening tag before this position
+    const lastOpenTag = html.lastIndexOf('<span', position);
+    if (lastOpenTag === -1) return false;
+    
+    // Find the last closing tag before this position
+    const lastCloseTag = html.lastIndexOf('</span>', position);
+    
+    // If the last open tag comes after the last close tag (or there is no close tag),
+    // then we're inside a span
+    return lastOpenTag > lastCloseTag;
+}
+
+// Enable inline highlighting for a textarea
+function enableInlineHighlighting(textarea) {
+    const container = textarea.parentNode;
+    if (!container.classList.contains('editor-container')) return;
+    
+    // Show the highlight overlay
+    const overlay = container.querySelector('.editor-highlight-overlay');
+    if (overlay) overlay.style.display = 'block';
+    
+    // Process current content
+    processHighlighting(textarea);
+    
+    // Set up the scroll sync
+    textarea.addEventListener('scroll', function() {
+        const overlay = this.parentNode.querySelector('.editor-highlight-overlay');
+        if (overlay) overlay.scrollTop = this.scrollTop;
+    });
+}
+
+// Disable inline highlighting for a textarea
+function disableInlineHighlighting(textarea) {
+    const container = textarea.parentNode;
+    if (!container.classList.contains('editor-container')) return;
+    
+    // Hide the highlight overlay
+    const overlay = container.querySelector('.editor-highlight-overlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+// Show options for new name
+function showNewNameOptions(name, popupElement) {
+    // Prepare popup content
+    popupElement.innerHTML = `
+        <div class="card-header bg-warning text-dark">
+            <h6 class="mb-0">New Person: ${name}</h6>
+        </div>
+        <div class="card-body">
+            <p class="small">This appears to be a new person in your journal.</p>
+            <div class="similar-names mb-2"></div>
+            <div class="d-grid gap-2">
+                <button class="btn btn-sm btn-primary create-person-btn">
+                    <i class="fas fa-plus-circle me-1"></i> Add as new person
+                </button>
+                <button class="btn btn-sm btn-secondary ignore-name-btn">
+                    <i class="fas fa-times me-1"></i> Ignore
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Find similar names
+    const similarNamesContainer = popupElement.querySelector('.similar-names');
+    let foundSimilar = false;
+    
+    // Filter allPeople for similar names using simple string similarity
+    const similarPeople = allPeople.filter(person => {
+        // Calculate simple similarity (using lowercase for both)
+        const nameLower = name.toLowerCase();
+        const personNameLower = person.name.toLowerCase();
+        
+        // Check for substring match or similar start/end
+        return personNameLower.includes(nameLower) || 
+               nameLower.includes(personNameLower) ||
+               (personNameLower.length > 3 && nameLower.startsWith(personNameLower.substring(0, 3))) ||
+               (nameLower.length > 3 && personNameLower.startsWith(nameLower.substring(0, 3)));
+    });
+    
+    if (similarPeople.length > 0) {
+        foundSimilar = true;
+        similarNamesContainer.innerHTML = `
+            <p class="small mb-1">Did you mean one of these people?</p>
+            <div class="similar-names-list"></div>
+        `;
+        
+        const namesList = similarNamesContainer.querySelector('.similar-names-list');
+        similarPeople.forEach(person => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-sm btn-outline-info me-1 mb-1';
+            btn.textContent = person.name;
+            btn.dataset.personId = person.id;
+            
+            // Style with person's color
+            const personColor = peopleColors[person.id] || '#3498db';
+            btn.style.borderColor = personColor;
+            btn.style.color = personColor;
+            
+            btn.addEventListener('click', function() {
+                // Apply this person to the highlighted name in the text
+                const highlights = document.querySelectorAll('.inline-person-highlight.new');
+                highlights.forEach(highlight => {
+                    if (highlight.textContent === name) {
+                        highlight.classList.remove('new');
+                        highlight.classList.add('known');
+                        highlight.dataset.personId = person.id;
+                        highlight.style.backgroundColor = personColor + '33';
+                        highlight.style.borderBottom = `1px solid ${personColor}`;
+                    }
+                });
+                
+                // Select this person in the dropdown
+                const option = Array.from(peopleDropdown.options).find(
+                    opt => parseInt(opt.value) === parseInt(person.id)
+                );
+                if (option) option.selected = true;
+                
+                // Hide the popup
+                popupElement.style.display = 'none';
+            });
+            
+            namesList.appendChild(btn);
+        });
+    }
+    
+    if (!foundSimilar) {
+        similarNamesContainer.innerHTML = `
+            <p class="small text-muted">No similar names found in your contacts.</p>
+        `;
+    }
+    
+    // Set up event handlers
+    const createBtn = popupElement.querySelector('.create-person-btn');
+    createBtn.addEventListener('click', function() {
+        createPersonFromHighlight(name);
+        popupElement.style.display = 'none';
+    });
+    
+    const ignoreBtn = popupElement.querySelector('.ignore-name-btn');
+    ignoreBtn.addEventListener('click', function() {
+        popupElement.style.display = 'none';
+    });
+}
+
+// Show person details in the suggestion popup
+function showPersonSuggestionDetails(personId, popupElement) {
+    // Get person details
+    const person = allPeople.find(p => p.id === parseInt(personId));
+    if (!person) {
+        popupElement.style.display = 'none';
+        return;
+    }
+    
+    // Get the person's color
+    const personColor = peopleColors[person.id] || '#3498db';
+    
+    // Prepare popup content
+    popupElement.innerHTML = `
+        <div class="card-header" style="background-color: ${personColor}; color: white;">
+            <h6 class="mb-0">${person.name}</h6>
+        </div>
+        <div class="card-body">
+            <p class="small mb-1">
+                <strong>Type:</strong> ${person.relationship_type || 'Not specified'}
+            </p>
+            <p class="small text-muted mb-2">
+                ${person.description || 'No description available'}
+            </p>
+            <div class="d-flex justify-content-between">
+                <button class="btn btn-sm btn-primary view-person-btn">
+                    <i class="fas fa-user me-1"></i> View profile
+                </button>
+                <button class="btn btn-sm btn-secondary close-popup-btn">
+                    <i class="fas fa-times me-1"></i> Close
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Set up event handlers
+    const viewBtn = popupElement.querySelector('.view-person-btn');
+    viewBtn.addEventListener('click', function() {
+        window.location.href = `/people?highlight=${person.id}`;
+    });
+    
+    const closeBtn = popupElement.querySelector('.close-popup-btn');
+    closeBtn.addEventListener('click', function() {
+        popupElement.style.display = 'none';
+    });
+}
+
+// Initialize the sentiment gradient bar
+function initSentimentGradientBar() {
+    // Create container for the gradient mood bar
+    const sentimentContainer = document.querySelector('.sentiment-preview');
+    if (!sentimentContainer) return;
+    
+    // Clear any existing content
+    sentimentContainer.innerHTML = '';
+    
+    // Create elements for the gradient mood bar
+    const moodBarContainer = document.createElement('div');
+    moodBarContainer.className = 'mood-gradient-container';
+    moodBarContainer.style.width = '100%';
+    moodBarContainer.style.height = '24px';
+    moodBarContainer.style.marginTop = '10px';
+    moodBarContainer.style.position = 'relative';
+    moodBarContainer.style.borderRadius = '12px';
+    moodBarContainer.style.overflow = 'hidden';
+    moodBarContainer.style.backgroundColor = 'rgba(0,0,0,0.1)';
+    
+    // Create the gradient bar
+    const gradientBar = document.createElement('div');
+    gradientBar.className = 'mood-gradient-bar';
+    gradientBar.style.width = '100%';
+    gradientBar.style.height = '100%';
+    gradientBar.style.position = 'absolute';
+    gradientBar.style.top = '0';
+    gradientBar.style.left = '0';
+    gradientBar.style.background = 'linear-gradient(90deg, rgba(70,70,70,0.8) 0%, rgba(70,70,70,0.8) 100%)';
+    gradientBar.style.transition = 'background 0.5s ease';
+    
+    // Add a label overlay
+    const moodLabel = document.createElement('div');
+    moodLabel.className = 'mood-label';
+    moodLabel.style.position = 'absolute';
+    moodLabel.style.top = '0';
+    moodLabel.style.left = '0';
+    moodLabel.style.width = '100%';
+    moodLabel.style.height = '100%';
+    moodLabel.style.display = 'flex';
+    moodLabel.style.alignItems = 'center';
+    moodLabel.style.justifyContent = 'center';
+    moodLabel.style.color = 'white';
+    moodLabel.style.fontSize = '12px';
+    moodLabel.style.fontWeight = 'bold';
+    moodLabel.style.textShadow = '0 1px 2px rgba(0,0,0,0.7)';
+    moodLabel.style.zIndex = '2';
+    moodLabel.textContent = 'Neutral';
+    
+    // Add the indicator marker
+    const sentimentMarker = document.createElement('div');
+    sentimentMarker.className = 'sentiment-marker';
+    sentimentMarker.style.position = 'absolute';
+    sentimentMarker.style.top = '0';
+    sentimentMarker.style.left = '50%';
+    sentimentMarker.style.width = '3px';
+    sentimentMarker.style.height = '100%';
+    sentimentMarker.style.backgroundColor = 'white';
+    sentimentMarker.style.transform = 'translateX(-50%)';
+    sentimentMarker.style.zIndex = '1';
+    sentimentMarker.style.boxShadow = '0 0 5px rgba(0,0,0,0.5)';
+    sentimentMarker.style.transition = 'left 0.5s ease';
+    
+    // Add all elements to the container
+    moodBarContainer.appendChild(gradientBar);
+    moodBarContainer.appendChild(sentimentMarker);
+    moodBarContainer.appendChild(moodLabel);
+    sentimentContainer.appendChild(moodBarContainer);
+    
+    // Create sentiment score display
+    const scoreDisplay = document.createElement('div');
+    scoreDisplay.className = 'sentiment-score-display';
+    scoreDisplay.style.textAlign = 'center';
+    scoreDisplay.style.fontSize = '12px';
+    scoreDisplay.style.marginTop = '5px';
+    scoreDisplay.style.color = 'var(--bs-secondary)';
+    scoreDisplay.textContent = 'Sentiment: 0.00';
+    
+    // Add score display to container
+    sentimentContainer.appendChild(scoreDisplay);
+    
+    // Initialize with neutral sentiment
+    updateSentimentGradientBar(0);
+}
+
+// Update sentiment analysis when content changes
+function updateSentimentAnalysis(text) {
+    // Calculate sentiment score using the existing function from sentiment.js
+    const score = calculateSentiment(text);
+    
+    // Update the gradient mood bar
+    updateSentimentGradientBar(score);
+}
+
+// Update the gradient mood bar based on sentiment score
+function updateSentimentGradientBar(score) {
+    const gradientBar = document.querySelector('.mood-gradient-bar');
+    const sentimentMarker = document.querySelector('.sentiment-marker');
+    const moodLabel = document.querySelector('.mood-label');
+    const scoreDisplay = document.querySelector('.sentiment-score-display');
+    
+    if (!gradientBar || !sentimentMarker || !moodLabel || !scoreDisplay) return;
+    
+    // Update the score display
+    scoreDisplay.textContent = `Sentiment: ${score.toFixed(2)}`;
+    
+    // Position the marker based on score (-1 to 1)
+    // Convert to 0-100% scale for positioning
+    const markerPosition = ((score + 1) / 2) * 100;
+    sentimentMarker.style.left = `${markerPosition}%`;
+    
+    // Determine the mood label and colors
+    let moodText = 'Neutral';
+    let gradientColors = '';
+    
+    if (score > 0.7) {
+        moodText = 'Very Positive';
+        gradientColors = 'linear-gradient(90deg, rgba(46,204,113,0.8) 0%, rgba(39,174,96,0.9) 100%)';
+    } else if (score > 0.3) {
+        moodText = 'Positive';
+        gradientColors = 'linear-gradient(90deg, rgba(241,196,15,0.6) 0%, rgba(46,204,113,0.8) 100%)';
+    } else if (score > 0.1) {
+        moodText = 'Slightly Positive';
+        gradientColors = 'linear-gradient(90deg, rgba(149,165,166,0.7) 0%, rgba(241,196,15,0.6) 100%)';
+    } else if (score < -0.7) {
+        moodText = 'Very Negative';
+        gradientColors = 'linear-gradient(90deg, rgba(192,57,43,0.9) 0%, rgba(231,76,60,0.8) 100%)';
+    } else if (score < -0.3) {
+        moodText = 'Negative';
+        gradientColors = 'linear-gradient(90deg, rgba(41,128,185,0.8) 0%, rgba(192,57,43,0.7) 100%)';
+    } else if (score < -0.1) {
+        moodText = 'Slightly Negative';
+        gradientColors = 'linear-gradient(90deg, rgba(149,165,166,0.7) 0%, rgba(41,128,185,0.6) 100%)';
+    } else {
+        moodText = 'Neutral';
+        gradientColors = 'linear-gradient(90deg, rgba(149,165,166,0.6) 0%, rgba(149,165,166,0.6) 100%)';
+    }
+    
+    // For mixed emotions (complex content), add some more color variation
+    // This is a simplified approach - a more complex analysis would be needed for truly accurate emotion detection
+    const content = document.getElementById('content')?.value || '';
+    if (content.length > 100) {
+        // Check for mixed emotions in longer text by looking for both positive and negative keywords
+        const positiveWords = ['happy', 'joy', 'love', 'excited', 'pleased'];
+        const negativeWords = ['sad', 'angry', 'upset', 'worried', 'disappointed'];
+        
+        let hasPositive = positiveWords.some(word => content.toLowerCase().includes(word));
+        let hasNegative = negativeWords.some(word => content.toLowerCase().includes(word));
+        
+        if (hasPositive && hasNegative) {
+            moodText = 'Mixed Emotions';
+            
+            // Create a more complex gradient for mixed emotions
+            if (score > 0) {
+                // More positive than negative
+                gradientColors = 'linear-gradient(90deg, rgba(41,128,185,0.4) 0%, rgba(149,165,166,0.5) 33%, rgba(241,196,15,0.6) 66%, rgba(46,204,113,0.7) 100%)';
+            } else {
+                // More negative than positive
+                gradientColors = 'linear-gradient(90deg, rgba(192,57,43,0.7) 0%, rgba(41,128,185,0.6) 33%, rgba(149,165,166,0.5) 66%, rgba(241,196,15,0.4) 100%)';
+            }
+            
+            // Add a subtle animation for mixed emotions
+            gradientBar.style.animation = 'gradient-shift 8s ease infinite';
+            
+            // Add keyframes if they don't exist yet
+            if (!document.getElementById('gradient-keyframes')) {
+                const style = document.createElement('style');
+                style.id = 'gradient-keyframes';
+                style.textContent = `
+                    @keyframes gradient-shift {
+                        0% { background-position: 0% 50%; }
+                        50% { background-position: 100% 50%; }
+                        100% { background-position: 0% 50%; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // Set background size for the animation
+            gradientBar.style.backgroundSize = '200% 200%';
+        } else {
+            // Remove animation for non-mixed emotions
+            gradientBar.style.animation = 'none';
+            gradientBar.style.backgroundSize = '100% 100%';
+        }
+    } else {
+        // Remove animation for short content
+        gradientBar.style.animation = 'none';
+        gradientBar.style.backgroundSize = '100% 100%';
+    }
+    
+    // Update the gradient and label
+    gradientBar.style.background = gradientColors;
+    moodLabel.textContent = moodText;
 }
 
 // Show alert message

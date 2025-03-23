@@ -123,6 +123,75 @@
     transform: translateY(-1px);
 }
 
+/* Inline person highlighting in textarea */
+.editor-container {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.editor-highlight-overlay {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.inline-person-highlight {
+    display: inline-block;
+    padding: 0 2px;
+    margin: 0 1px;
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
+    transition: all 0.2s ease;
+}
+
+.inline-person-highlight.known {
+    background-color: rgba(52, 152, 219, 0.2); /* Default blue */
+    border-bottom: 1px solid rgba(52, 152, 219, 0.7);
+}
+
+.inline-person-highlight.new {
+    background-color: rgba(241, 196, 15, 0.2); /* Yellow */
+    border-bottom: 1px dashed rgba(241, 196, 15, 0.7);
+}
+
+.inline-person-highlight:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Name suggestion popup */
+.name-suggestion-popup {
+    min-width: 200px;
+    z-index: 1050;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+/* Sentiment mood gradient bar */
+.mood-gradient-container {
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.mood-gradient-bar {
+    transform: translateZ(0); /* Force GPU acceleration for smoother animation */
+}
+
+.sentiment-marker {
+    transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Mixed emotions gradient animation */
+@keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
 /* Content preview */
 #content-preview {
     min-height: 50px;

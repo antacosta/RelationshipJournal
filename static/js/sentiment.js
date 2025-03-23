@@ -5,23 +5,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get the content textarea element
     const contentTextarea = document.getElementById('content');
     
-    // Get the sentiment indicator elements
-    const sentimentScore = document.getElementById('sentiment-score');
-    const sentimentIndicator = document.getElementById('sentiment-indicator');
-    
-    // Only proceed if we're on the journal page with these elements
-    if (contentTextarea && sentimentScore && sentimentIndicator) {
-        // Add event listener for real-time analysis
-        contentTextarea.addEventListener('input', function() {
-            // Get the current text
-            const text = this.value;
-            
-            // Perform simple client-side sentiment analysis
-            const score = calculateSentiment(text);
-            
-            // Update the sentiment indicator
-            updateSentimentIndicator(score);
-        });
+    // Only proceed if we're on the journal page with the content element
+    if (contentTextarea) {
+        // The event listener for real-time analysis is set up in journal.js
+        // to integrate with the enhanced text editor
     }
 });
 
