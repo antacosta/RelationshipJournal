@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}People Management - Personal Journal App{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">People Management</h1>
+    </div>
+</div>
+
+<div class="row">
+    <!-- People Form -->
+    <div class="col-lg-4 mb-4">
+        <div class="form-container">
+            <h4 id="people-form-title" class="mb-3">Add New Person</h4>
+            <form id="people-form">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name</label>
+                    <input type="text" class="form-control" id="name" required placeholder="Enter person's name">
+                </div>
+                <div class="mb-3">
+                    <label for="relationship-type" class="form-label">Relationship Type</label>
+                    <select class="form-select" id="relationship-type">
+                        <option value="">Select type (optional)</option>
+                        <option value="Family">Family</option>
+                        <option value="Friend">Friend</option>
+                        <option value="Colleague">Colleague</option>
+                        <option value="Acquaintance">Acquaintance</option>
+                        <option value="Romantic">Romantic</option>
+                        <option value="Professional">Professional</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" id="description" rows="3" placeholder="Add notes about this person (optional)"></textarea>
+                </div>
+                <div class="d-grid">
+                    <button type="submit" id="submit-button" class="btn btn-primary">Add Person</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- People List -->
+    <div class="col-lg-8">
+        <div class="mb-3">
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" class="form-control" id="search-people" placeholder="Search people...">
+            </div>
+        </div>
+        
+        <div id="people-list">
+            <!-- People list will be loaded here -->
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading people...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/people.js') }}"></script>
+{% endblock %}

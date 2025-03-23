@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Relationship Visualizations - Personal Journal App{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Relationship Visualizations</h1>
+        <p class="lead">Visualize your relationship patterns and emotional connections over time.</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Relationship Strength Chart -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Relationship Strength</h5>
+            </div>
+            <div class="card-body">
+                <div id="relationship-strength-chart-container" class="chart-container">
+                    <canvas id="relationship-strength-chart"></canvas>
+                </div>
+                <p class="text-muted small">This chart shows the number of journal entries and average sentiment for each person.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Interaction Frequency Chart -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Interaction Frequency</h5>
+            </div>
+            <div class="card-body">
+                <div id="interaction-frequency-chart-container" class="chart-container">
+                    <canvas id="interaction-frequency-chart"></canvas>
+                </div>
+                <p class="text-muted small">This chart shows how frequently you interact with each person over time.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Emotion Timeline -->
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Emotion Timeline</h5>
+                <div>
+                    <select id="person-selector" class="form-select form-select-sm" style="width: auto;">
+                        <option value="">Select a person</option>
+                        <!-- Person options will be loaded here -->
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="emotion-timeline-chart-container" class="chart-container">
+                    <canvas id="emotion-timeline-chart"></canvas>
+                </div>
+                <p class="text-muted small">This chart shows the emotional sentiment of your interactions with a selected person over time.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card bg-dark shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Understanding the Visualizations</h5>
+            </div>
+            <div class="card-body">
+                <dl>
+                    <dt>Relationship Strength</dt>
+                    <dd>
+                        <p>This visualization combines the frequency of interactions (number of journal entries) with the emotional quality (average sentiment) of those interactions. A higher bar with a positive sentiment (green) indicates a strong positive relationship.</p>
+                    </dd>
+                    
+                    <dt>Interaction Frequency</dt>
+                    <dd>
+                        <p>This chart tracks how often you interact with different people over time. It can help you identify patterns in your relationships, such as which relationships are consistent versus sporadic.</p>
+                    </dd>
+                    
+                    <dt>Emotion Timeline</dt>
+                    <dd>
+                        <p>This timeline shows the emotional sentiment of your interactions with a specific person over time. Look for trends (improving or deteriorating), consistency, and emotional range to better understand your relationship dynamics.</p>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/visualizations.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Personal Journal App{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Welcome to Your Relationship Journal</h1>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Track and Visualize Your Relationships</h5>
+                <p class="card-text">
+                    This journal helps you track your relationships with people over time and visualize 
+                    interaction patterns, emotional trends, and relationship strength.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-book fa-3x mb-3 text-primary"></i>
+                <h5 class="card-title">Journal Entries</h5>
+                <p class="card-text">Record your daily interactions and emotions related to specific people in your life.</p>
+                <a href="{{ url_for('journal') }}" class="btn btn-outline-primary">Go to Journal</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-users fa-3x mb-3 text-primary"></i>
+                <h5 class="card-title">People Management</h5>
+                <p class="card-text">Add and manage people in your life that you want to track relationships with.</p>
+                <a href="{{ url_for('people') }}" class="btn btn-outline-primary">Manage People</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-3x mb-3 text-primary"></i>
+                <h5 class="card-title">Visualizations</h5>
+                <p class="card-text">See patterns and trends in your relationships through interactive visualizations.</p>
+                <a href="{{ url_for('visualizations') }}" class="btn btn-outline-primary">View Insights</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card bg-dark shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">How to Use This App</h5>
+                <ol class="card-text">
+                    <li>Start by adding people you want to track relationships with in the <strong>People</strong> section.</li>
+                    <li>Create journal entries about your interactions in the <strong>Journal</strong> section, linking them to specific people.</li>
+                    <li>Add emotional context and relationship details to build your data.</li>
+                    <li>Check the <strong>Visualizations</strong> section to see relationship patterns emerge over time.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Features</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check-circle text-success me-2"></i> 
+                                Journal entries with person tagging
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check-circle text-success me-2"></i> 
+                                Relationship visualization
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check-circle text-success me-2"></i> 
+                                Emotion tracking and sentiment analysis
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check-circle text-success me-2"></i> 
+                                Interaction frequency monitoring
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check-circle text-success me-2"></i> 
+                                Search and filter capabilities
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check-circle text-success me-2"></i> 
+                                Responsive design for all devices
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
