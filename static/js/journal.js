@@ -635,9 +635,30 @@ function processHighlighting(textarea) {
     highlightOverlay.style.width = textarea.clientWidth + 'px';
     highlightOverlay.style.height = textarea.clientHeight + 'px';
     
+    // Get or create the detected names container
+    let detectedNamesContainer = document.getElementById('detected-names-container');
+    if (!detectedNamesContainer) {
+        detectedNamesContainer = document.createElement('div');
+        detectedNamesContainer.id = 'detected-names-container';
+        detectedNamesContainer.className = 'mt-2 p-2 border-top';
+        
+        // Find the right place to insert it (after the sentiment preview)
+        const sentimentPreview = document.querySelector('.sentiment-preview');
+        if (sentimentPreview) {
+            sentimentPreview.parentNode.insertBefore(detectedNamesContainer, sentimentPreview.nextSibling);
+        } else {
+            // Fallback: add it after the editor container
+            const editorContainer = textarea.parentNode;
+            editorContainer.parentNode.insertBefore(detectedNamesContainer, editorContainer.nextSibling);
+        }
+    }
+    
     // Process the text for highlighting
     let highlightedHtml = '';
     let lastIndex = 0;
+    
+    // Track all detected names
+    const detectedNames = new Map();
     
     // Find and highlight known people
     allPeople.forEach(person => {
@@ -652,6 +673,15 @@ function processHighlighting(textarea) {
         
         // Find all matches
         while ((match = regex.exec(text)) !== null) {
+            // Skip if the match is part of a previously highlighted area
+            let skipMatch = false;
+            for (let i = match.index; i < match.index + match[0].length; i++) {
+                if (i >= lastIndex) continue;
+                skipMatch = true;
+                break;
+            }
+            if (skipMatch) continue;
+            
             // Add text before the match
             highlightedHtml += escapeHtml(text.substring(lastIndex, match.index));
             
@@ -660,6 +690,13 @@ function processHighlighting(textarea) {
             highlightedHtml += `<span class="inline-person-highlight known" 
                                     data-person-id="${person.id}" 
                                     style="background-color: ${personColor}33; border-bottom: 1px solid ${personColor};">${escapeHtml(match[0])}</span>`;
+            
+            // Add to detected names map
+            detectedNames.set(person.name, {
+                id: person.id,
+                isKnown: true,
+                color: personColor
+            });
             
             // Update lastIndex to continue after this match
             lastIndex = match.index + match[0].length;
@@ -718,6 +755,13 @@ function processHighlighting(textarea) {
             // Add the highlighted name
             newHighlightedHtml += `<span class="inline-person-highlight new">${escapeHtml(name)}</span>`;
             
+            // Add to detected names map
+            if (!detectedNames.has(name)) {
+                detectedNames.set(name, {
+                    isKnown: false
+                });
+            }
+            
             // Update lastIndex to continue after this match
             lastIndex = htmlIndex + name.length;
         } else {
@@ -732,6 +776,9 @@ function processHighlighting(textarea) {
     
     // Set the highlighted HTML
     highlightOverlay.innerHTML = newHighlightedHtml || highlightedHtml;
+    
+    // Update detected names container
+    updateDetectedNamesPanel(detectedNamesContainer, detectedNames);
     
     // Adjust scroll position of highlight overlay to match textarea
     highlightOverlay.scrollTop = textarea.scrollTop;
@@ -922,6 +969,69 @@ function showNewNameOptions(name, popupElement) {
     const ignoreBtn = popupElement.querySelector('.ignore-name-btn');
     ignoreBtn.addEventListener('click', function() {
         popupElement.style.display = 'none';
+    });
+}
+
+// Update the detected names panel
+function updateDetectedNamesPanel(container, detectedNames) {
+    if (!container || detectedNames.size === 0) {
+        if (container) container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    container.innerHTML = '<div class="d-flex flex-wrap align-items-center">' +
+                        '<small class="text-muted me-2">Mentioned people:</small>' +
+                        '<div class="name-badges"></div>' +
+                        '</div>';
+                        
+    const badgesContainer = container.querySelector('.name-badges');
+    
+    // Convert map to array and sort (known people first, then alphabetically)
+    const namesArray = Array.from(detectedNames.entries())
+        .sort((a, b) => {
+            // Sort known people first
+            if (a[1].isKnown && !b[1].isKnown) return -1;
+            if (!a[1].isKnown && b[1].isKnown) return 1;
+            
+            // Then sort alphabetically by name
+            return a[0].localeCompare(b[0]);
+        });
+    
+    // Create badges for each name
+    namesArray.forEach(([name, info]) => {
+        const badge = document.createElement('span');
+        badge.className = 'badge rounded-pill me-1 mb-1';
+        
+        if (info.isKnown) {
+            badge.classList.add('known-person-badge');
+            badge.style.backgroundColor = info.color + '33';
+            badge.style.color = info.color;
+            badge.style.borderColor = info.color;
+            badge.dataset.personId = info.id;
+            badge.style.cursor = 'pointer';
+            badge.addEventListener('click', function() {
+                // Add this person to the selected people in the dropdown
+                const peopleDropdown = document.getElementById('journal-people');
+                if (peopleDropdown) {
+                    const option = Array.from(peopleDropdown.options).find(
+                        opt => parseInt(opt.value) === parseInt(info.id)
+                    );
+                    if (option) option.selected = true;
+                }
+            });
+        } else {
+            badge.classList.add('new-person-badge');
+            badge.style.backgroundColor = 'rgba(241, 196, 15, 0.2)';
+            badge.style.color = '#d35400';
+            badge.style.cursor = 'pointer';
+            badge.addEventListener('click', function() {
+                createPersonFromHighlight(name);
+            });
+        }
+        
+        badge.textContent = name;
+        badgesContainer.appendChild(badge);
     });
 }
 
