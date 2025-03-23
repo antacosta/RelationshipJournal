@@ -227,6 +227,33 @@
     margin-top: 1.5rem;
 }
 
+/* Detected names panel */
+#detected-names-container {
+    min-height: 32px;
+    transition: all 0.3s ease;
+}
+
+.known-person-badge {
+    border: 1px solid;
+    transition: all 0.2s ease;
+}
+
+.known-person-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.new-person-badge {
+    border: 1px dashed #d35400;
+    transition: all 0.2s ease;
+}
+
+.new-person-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background-color: rgba(241, 196, 15, 0.3) !important;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
     width: 8px;

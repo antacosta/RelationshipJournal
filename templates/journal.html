@@ -40,22 +40,6 @@
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label for="mood" class="form-label">Mood</label>
-                    <select class="form-select" id="mood">
-                        <option value="">Select mood (optional)</option>
-                        <option value="Happy">Happy</option>
-                        <option value="Excited">Excited</option>
-                        <option value="Content">Content</option>
-                        <option value="Calm">Calm</option>
-                        <option value="Neutral">Neutral</option>
-                        <option value="Anxious">Anxious</option>
-                        <option value="Frustrated">Frustrated</option>
-                        <option value="Sad">Sad</option>
-                        <option value="Angry">Angry</option>
-                        <option value="Mixed">Mixed feelings</option>
-                    </select>
-                </div>
-                <div class="mb-3">
                     <label for="interaction-type" class="form-label">Interaction Type</label>
                     <select class="form-select" id="interaction-type">
                         <option value="">Select type (optional)</option>
@@ -69,13 +53,12 @@
                         <option value="No direct interaction">No direct interaction</option>
                     </select>
                 </div>
-                <div class="mb-3">
-                    <label for="people-select" class="form-label">Related People</label>
-                    <select class="form-select" id="people-select" multiple>
-                        <!-- People options will be loaded here -->
-                    </select>
-                    <div class="form-text">Hold Ctrl (or Cmd) to select multiple people</div>
-                </div>
+                
+                <!-- Hidden fields for automatically detected mood and people -->
+                <input type="hidden" id="mood" value="">
+                <select id="people-select" multiple style="display:none;">
+                    <!-- People options will be loaded here but selected automatically -->
+                </select>
                 <div class="d-grid">
                     <button type="submit" id="submit-button" class="btn btn-primary">Save Entry</button>
                 </div>
