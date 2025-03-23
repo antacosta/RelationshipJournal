@@ -375,39 +375,6 @@ function highlightNamesInRealtime(content) {
     if (contentTextarea) {
         processHighlighting(contentTextarea);
     }
-                    regex, 
-                    `<span class="person-highlight known" data-person-id="${personId}">${name}</span>`
-                );
-            }
-        }
-    });
-    
-    // Look for potential new names (capitalized words not at the beginning of sentences)
-    // This is a simple implementation - in a real app, we'd use more sophisticated NLP
-    const words = content.split(/\s+/);
-    words.forEach(word => {
-        // Check if word starts with capital letter and isn't already highlighted
-        if (word.length > 1 && 
-            word.match(/^[A-Z][a-z]+$/) && 
-            !peopleNames.includes(word) &&
-            !highlightedContent.includes(`>${word}<`)) {
-            
-            // Don't highlight words that appear at the beginning of a sentence
-            const wordIndex = highlightedContent.indexOf(word);
-            if (wordIndex > 0) {
-                const charBefore = highlightedContent[wordIndex - 1];
-                if (!['.', '!', '?', '\n'].includes(charBefore)) {
-                    highlightedContent = highlightedContent.replace(
-                        new RegExp(`\\b${word}\\b`, 'g'),
-                        `<span class="person-highlight new">${word}</span>`
-                    );
-                }
-            }
-        }
-    });
-    
-    // Update preview
-    previewElement.innerHTML = highlightedContent;
 }
 
 // Show person details when clicking on a highlighted name
