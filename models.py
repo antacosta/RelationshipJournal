@@ -40,18 +40,59 @@ class Person(db.Model):
                                      secondary='journal_person', 
                                      backref=db.backref('people', lazy='dynamic'))
     
+    # Relationships with other people
+    connections_as_source = db.relationship('PersonConnection', 
+                                       foreign_keys='PersonConnection.source_id',
+                                       backref='source_person', 
+                                       lazy='dynamic',
+                                       cascade='all, delete-orphan')
+    
+    connections_as_target = db.relationship('PersonConnection', 
+                                       foreign_keys='PersonConnection.target_id',
+                                       backref='target_person', 
+                                       lazy='dynamic',
+                                       cascade='all, delete-orphan')
+    
+    def get_connections(self):
+        """Get all connections for this person (both as source and target)"""
+        return self.connections_as_source.all() + self.connections_as_target.all()
+    
     def __repr__(self):
         return f'<Person {self.name}>'
+
+class PersonConnection(db.Model):
+    """Represents a relationship between two people"""
+    id = db.Column(db.Integer, primary_key=True)
+    source_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    target_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    
+    # Relationship characteristics
+    relationship_type = db.Column(db.String(50))  # e.g., friend, family, dating, married, colleague
+    closeness = db.Column(db.Integer)  # Scale of 1-10
+    sentiment = db.Column(db.Float)  # Scale of -1 to 1, representing positive/negative relationship
+    notes = db.Column(db.Text)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Stats derived from journal entries
+    interaction_count = db.Column(db.Integer, default=0)
+    mention_count = db.Column(db.Integer, default=0)
+    
+    def __repr__(self):
+        return f'<PersonConnection {self.source_id}-{self.target_id}: {self.relationship_type}>'
 
 class JournalEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
+    content_with_highlights = db.Column(db.Text)  # Content with HTML highlights for names
     date_created = db.Column(db.DateTime, default=datetime.utcnow)
     mood = db.Column(db.String(50))  # e.g., happy, sad, neutral
     sentiment_score = db.Column(db.Float)  # numerical sentiment (-1 to 1)
     interaction_type = db.Column(db.String(50))  # e.g., meeting, call, text
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Additional metadata for relationship analysis
+    extracted_names = db.Column(db.Text)  # JSON string of names extracted from content
     
     def __repr__(self):
         return f'<JournalEntry {self.title}>'
