@@ -23,6 +23,20 @@
                     <label for="content" class="form-label">Content</label>
                     <textarea class="form-control" id="content" rows="5" required placeholder="Write your journal entry here..."></textarea>
                     
+                    <!-- Name Recognition Toggle -->
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="name-recognition-toggle" checked>
+                        <label class="form-check-label" for="name-recognition-toggle">
+                            Enable automatic name recognition
+                        </label>
+                    </div>
+                    
+                    <!-- Content Preview with Name Highlighting -->
+                    <div class="content-preview-container mt-2 p-2 rounded border" style="min-height: 100px; background-color: rgba(0,0,0,0.02);">
+                        <label class="form-label small text-muted">Preview with name highlighting:</label>
+                        <div id="content-preview" class="p-2"></div>
+                    </div>
+                    
                     <!-- Sentiment Analysis Preview -->
                     <div class="sentiment-preview mt-2">
                         <small class="text-muted">Sentiment:</small>

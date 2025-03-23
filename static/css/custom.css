@@ -98,6 +98,37 @@
     border-radius: 1px;
 }
 
+/* Person highlighting */
+.person-highlight {
+    display: inline-block;
+    padding: 0 4px;
+    margin: 0 1px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.person-highlight.known {
+    background-color: rgba(var(--bs-primary-rgb), 0.15);
+    border-bottom: 1px solid var(--bs-primary);
+}
+
+.person-highlight.new {
+    background-color: rgba(var(--bs-warning-rgb), 0.15);
+    border-bottom: 1px dashed var(--bs-warning);
+}
+
+.person-highlight:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.25);
+    transform: translateY(-1px);
+}
+
+/* Content preview */
+#content-preview {
+    min-height: 50px;
+    line-height: 1.5;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
     width: 8px;

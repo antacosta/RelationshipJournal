@@ -2,6 +2,7 @@
 let relationshipStrengthChart = null;
 let interactionFrequencyChart = null;
 let emotionTimelineChart = null;
+let socialNetworkGraph = null;
 
 // Initialize visualizations page
 document.addEventListener('DOMContentLoaded', function() {
@@ -11,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load initial visualizations
     loadRelationshipStrengthVisualization();
     loadInteractionFrequencyVisualization();
+    loadSocialWebVisualization();
     
     // Set up person selector change event
     const personSelector = document.getElementById('person-selector');
@@ -19,6 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const personId = this.value;
             if (personId) {
                 loadEmotionTimelineVisualization(personId);
+                highlightPersonInSocialWeb(personId);
             } else {
                 // If no person selected, clear the emotion timeline chart
                 if (emotionTimelineChart) {
@@ -27,7 +30,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('emotion-timeline-chart-container').innerHTML = 
                         '<div class="text-center py-5">Select a person to view their emotion timeline</div>';
                 }
+                
+                // Reset social web highlights
+                resetSocialWebHighlights();
             }
+        });
+    }
+    
+    // Set up relationship edit form
+    const relationshipForm = document.getElementById('relationship-form');
+    if (relationshipForm) {
+        relationshipForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            updatePersonConnection();
         });
     }
 });

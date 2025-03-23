@@ -3,6 +3,7 @@ let journalForm;
 let journalEntriesList;
 let peopleDropdown;
 let editingEntryId = null;
+let nameRecognitionEnabled = true; // Enable name recognition by default
 
 // Initialize journal page
 document.addEventListener('DOMContentLoaded', function() {
@@ -25,6 +26,24 @@ document.addEventListener('DOMContentLoaded', function() {
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();
             filterJournalEntries(searchTerm);
+        });
+    }
+    
+    // Set up name recognition toggle
+    const nameRecognitionToggle = document.getElementById('name-recognition-toggle');
+    if (nameRecognitionToggle) {
+        nameRecognitionToggle.addEventListener('change', function() {
+            nameRecognitionEnabled = this.checked;
+        });
+    }
+    
+    // Set up content textarea to show realtime name highlighting
+    const contentTextarea = document.getElementById('content');
+    if (contentTextarea) {
+        contentTextarea.addEventListener('input', function() {
+            if (nameRecognitionEnabled) {
+                highlightNamesInRealtime(this.value);
+            }
         });
     }
 });
@@ -83,6 +102,9 @@ function displayJournalEntries(entries) {
             sentimentText = 'Negative';
         }
         
+        // Use content with highlights if available, otherwise use regular content
+        const displayContent = entry.content_with_highlights || entry.content;
+        
         entryCard.innerHTML = `
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">${entry.title}</h5>
@@ -93,7 +115,7 @@ function displayJournalEntries(entries) {
                 </div>
             </div>
             <div class="card-body">
-                <div class="card-text mb-2">${entry.content}</div>
+                <div class="card-text mb-2">${displayContent}</div>
                 ${peopleTags}
                 <div class="text-muted small mt-2">${formattedDate}</div>
             </div>
@@ -109,6 +131,20 @@ function displayJournalEntries(entries) {
         
         editButton.addEventListener('click', () => editJournalEntry(entry.id));
         deleteButton.addEventListener('click', () => deleteJournalEntry(entry.id));
+        
+        // Add event listeners for person highlights
+        const personHighlights = entryCard.querySelectorAll('.person-highlight');
+        personHighlights.forEach(highlight => {
+            if (highlight.classList.contains('known')) {
+                // For known people, add a click handler to show details
+                const personId = highlight.dataset.personId;
+                highlight.addEventListener('click', () => showPersonDetails(personId));
+            } else if (highlight.classList.contains('new')) {
+                // For new people, add a click handler to create new person
+                const personName = highlight.textContent;
+                highlight.addEventListener('click', () => createPersonFromHighlight(personName));
+            }
+        });
         
         journalEntriesList.appendChild(entryCard);
     });
@@ -272,6 +308,226 @@ function filterJournalEntries(searchTerm) {
             card.style.display = 'none';
         }
     });
+}
+
+// Handle highlighting names in realtime as user types
+function highlightNamesInRealtime(content) {
+    // Only perform this if we have a preview element
+    const previewElement = document.getElementById('content-preview');
+    if (!previewElement) return;
+    
+    // Get all people from our dropdown
+    const peopleOptions = Array.from(peopleDropdown.options);
+    const peopleNames = peopleOptions.map(option => option.textContent);
+    
+    // Create a temporary copy of content for highlighting
+    let highlightedContent = content;
+    
+    // Highlight existing people names
+    peopleNames.forEach(name => {
+        if (name && name.length > 0 && content.includes(name)) {
+            const regex = new RegExp(`\\b${name}\\b`, 'gi');
+            const personId = peopleOptions.find(option => option.textContent === name)?.value;
+            
+            if (personId) {
+                highlightedContent = highlightedContent.replace(
+                    regex, 
+                    `<span class="person-highlight known" data-person-id="${personId}">${name}</span>`
+                );
+            }
+        }
+    });
+    
+    // Look for potential new names (capitalized words not at the beginning of sentences)
+    // This is a simple implementation - in a real app, we'd use more sophisticated NLP
+    const words = content.split(/\s+/);
+    words.forEach(word => {
+        // Check if word starts with capital letter and isn't already highlighted
+        if (word.length > 1 && 
+            word.match(/^[A-Z][a-z]+$/) && 
+            !peopleNames.includes(word) &&
+            !highlightedContent.includes(`>${word}<`)) {
+            
+            // Don't highlight words that appear at the beginning of a sentence
+            const wordIndex = highlightedContent.indexOf(word);
+            if (wordIndex > 0) {
+                const charBefore = highlightedContent[wordIndex - 1];
+                if (!['.', '!', '?', '\n'].includes(charBefore)) {
+                    highlightedContent = highlightedContent.replace(
+                        new RegExp(`\\b${word}\\b`, 'g'),
+                        `<span class="person-highlight new">${word}</span>`
+                    );
+                }
+            }
+        }
+    });
+    
+    // Update preview
+    previewElement.innerHTML = highlightedContent;
+}
+
+// Show person details when clicking on a highlighted name
+function showPersonDetails(personId) {
+    fetch(`/api/people/${personId}`)
+        .then(response => response.json())
+        .then(person => {
+            const modal = new bootstrap.Modal(document.getElementById('person-details-modal') || createPersonDetailsModal());
+            
+            // Populate modal with person details
+            document.getElementById('person-modal-name').textContent = person.name;
+            document.getElementById('person-modal-type').textContent = person.relationship_type || 'Unknown';
+            document.getElementById('person-modal-description').textContent = person.description || 'No description available';
+            
+            // Add button to view person page
+            const viewPersonBtn = document.getElementById('view-person-btn');
+            viewPersonBtn.onclick = () => window.location.href = `/people?highlight=${personId}`;
+            
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error fetching person details:', error);
+            showAlert('Failed to load person details', 'danger');
+        });
+}
+
+// Create a new person from a highlighted name
+function createPersonFromHighlight(name) {
+    const modal = new bootstrap.Modal(document.getElementById('create-person-modal') || createNewPersonModal());
+    
+    // Populate name field
+    document.getElementById('new-person-name').value = name;
+    
+    // Setup form submission
+    const createPersonForm = document.getElementById('create-person-form');
+    createPersonForm.onsubmit = function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('new-person-name').value;
+        const type = document.getElementById('new-person-type').value;
+        const description = document.getElementById('new-person-description').value;
+        
+        const personData = {
+            name: name,
+            relationship_type: type,
+            description: description
+        };
+        
+        fetch('/api/people', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(personData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                showAlert(data.error, 'danger');
+                return;
+            }
+            
+            showAlert('Person created successfully!', 'success');
+            modal.hide();
+            
+            // Reload people dropdown and journal entries
+            loadPeopleForDropdown();
+            loadJournalEntries();
+        })
+        .catch(error => {
+            console.error('Error creating person:', error);
+            showAlert('Failed to create person', 'danger');
+        });
+    };
+    
+    modal.show();
+}
+
+// Create person details modal if it doesn't exist
+function createPersonDetailsModal() {
+    const modalElement = document.createElement('div');
+    modalElement.className = 'modal fade';
+    modalElement.id = 'person-details-modal';
+    modalElement.tabIndex = '-1';
+    modalElement.setAttribute('aria-labelledby', 'personDetailsModalLabel');
+    modalElement.setAttribute('aria-hidden', 'true');
+    
+    modalElement.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="personDetailsModalLabel">Person Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h4 id="person-modal-name"></h4>
+                        <span class="badge bg-info" id="person-modal-type"></span>
+                    </div>
+                    <div class="mb-3">
+                        <p id="person-modal-description" class="text-muted"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="view-person-btn">View Person Profile</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modalElement);
+    return modalElement;
+}
+
+// Create new person modal if it doesn't exist
+function createNewPersonModal() {
+    const modalElement = document.createElement('div');
+    modalElement.className = 'modal fade';
+    modalElement.id = 'create-person-modal';
+    modalElement.tabIndex = '-1';
+    modalElement.setAttribute('aria-labelledby', 'createPersonModalLabel');
+    modalElement.setAttribute('aria-hidden', 'true');
+    
+    modalElement.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createPersonModalLabel">Create New Person</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-person-form">
+                        <div class="mb-3">
+                            <label for="new-person-name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="new-person-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-person-type" class="form-label">Relationship Type</label>
+                            <select class="form-select" id="new-person-type">
+                                <option value="">- Select Type -</option>
+                                <option value="friend">Friend</option>
+                                <option value="family">Family</option>
+                                <option value="colleague">Colleague</option>
+                                <option value="acquaintance">Acquaintance</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-person-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="new-person-description" rows="3"></textarea>
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Create Person</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modalElement);
+    return modalElement;
 }
 
 // Show alert message
