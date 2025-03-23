@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Journal Entries - Personal Journal App{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Journal Entries</h1>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Journal Entry Form -->
+    <div class="col-lg-4 mb-4">
+        <div class="form-container">
+            <h4 id="journal-form-title" class="mb-3">Create Journal Entry</h4>
+            <form id="journal-form">
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title</label>
+                    <input type="text" class="form-control" id="title" required placeholder="Enter a title for your entry">
+                </div>
+                <div class="mb-3">
+                    <label for="content" class="form-label">Content</label>
+                    <textarea class="form-control" id="content" rows="5" required placeholder="Write your journal entry here..."></textarea>
+                    
+                    <!-- Sentiment Analysis Preview -->
+                    <div class="sentiment-preview mt-2">
+                        <small class="text-muted">Sentiment:</small>
+                        <span id="sentiment-score" class="mx-1">0.00</span>
+                        <span id="sentiment-indicator" class="badge bg-secondary">Neutral</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="mood" class="form-label">Mood</label>
+                    <select class="form-select" id="mood">
+                        <option value="">Select mood (optional)</option>
+                        <option value="Happy">Happy</option>
+                        <option value="Excited">Excited</option>
+                        <option value="Content">Content</option>
+                        <option value="Calm">Calm</option>
+                        <option value="Neutral">Neutral</option>
+                        <option value="Anxious">Anxious</option>
+                        <option value="Frustrated">Frustrated</option>
+                        <option value="Sad">Sad</option>
+                        <option value="Angry">Angry</option>
+                        <option value="Mixed">Mixed feelings</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="interaction-type" class="form-label">Interaction Type</label>
+                    <select class="form-select" id="interaction-type">
+                        <option value="">Select type (optional)</option>
+                        <option value="In-person meeting">In-person meeting</option>
+                        <option value="Phone call">Phone call</option>
+                        <option value="Video call">Video call</option>
+                        <option value="Text/Chat">Text/Chat</option>
+                        <option value="Email">Email</option>
+                        <option value="Social media">Social media</option>
+                        <option value="Group event">Group event</option>
+                        <option value="No direct interaction">No direct interaction</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="people-select" class="form-label">Related People</label>
+                    <select class="form-select" id="people-select" multiple>
+                        <!-- People options will be loaded here -->
+                    </select>
+                    <div class="form-text">Hold Ctrl (or Cmd) to select multiple people</div>
+                </div>
+                <div class="d-grid">
+                    <button type="submit" id="submit-button" class="btn btn-primary">Save Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Journal Entries List -->
+    <div class="col-lg-8">
+        <div class="mb-3">
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" class="form-control" id="search-journal" placeholder="Search journal entries...">
+            </div>
+        </div>
+        
+        <div id="journal-entries">
+            <!-- Journal entries will be loaded here -->
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading journal entries...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/journal.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sentiment.js') }}"></script>
+{% endblock %}

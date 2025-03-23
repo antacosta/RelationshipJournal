@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Personal Journal App{% endblock %}</title>
+    <!-- Bootstrap 5 CSS (Replit theme) -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header class="site-header">
+        <div class="container">
+            <nav class="navbar navbar-expand-lg navbar-dark">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="{{ url_for('index') }}">
+                        <i class="fas fa-book-reader me-2"></i>
+                        Relationship Journal
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            {% if current_user.is_authenticated %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{{ url_for('index') }}">Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/journal' %}active{% endif %}" href="{{ url_for('journal') }}">Journal</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/people' %}active{% endif %}" href="{{ url_for('people') }}">People</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/visualizations' %}active{% endif %}" href="{{ url_for('visualizations') }}">Visualizations</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                            </li>
+                            {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/login' %}active{% endif %}" href="{{ url_for('login') }}">Login</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/register' %}active{% endif %}" href="{{ url_for('register') }}">Register</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="py-4">
+        <div class="container">
+            <!-- Alert container for JavaScript alerts -->
+            <div id="alert-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+            
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="site-footer text-center">
+        <div class="container">
+            <p>Personal Journal App with Relationship Visualization &copy; 2025</p>
+            <p class="small">Track your relationships and emotional connections over time</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JavaScript Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>
