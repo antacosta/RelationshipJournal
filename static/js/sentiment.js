@@ -48,12 +48,14 @@ function calculateSentiment(text) {
         'devastated': -1.0, 'heartbroken': -1.0, 'miserable': -0.9, 'despair': -0.9,
         'absolutely hate': -0.9, 'terrible': -0.9, 'horrible': -0.9, 'furious': -0.9,
         'completely failed': -0.9, 'disaster': -0.8, 'awful': -0.8, 'disgusted': -0.8,
-        'dreadful': -0.8, 'terrified': -0.8, 'depressed': -0.8,
+        'dreadful': -0.8, 'terrified': -0.8, 'depressed': -0.8, 'jerk': -0.8,
+        'big jerk': -0.9, 'worst': -0.9, 'idiot': -0.8, 'stupid': -0.8, 'hate': -0.8,
         
         // Moderate negative emotions (score: -0.6 to -0.7)
-        'sad': -0.7, 'angry': -0.7, 'upset': -0.7, 'hate': -0.7, 'annoyed': -0.7,
+        'sad': -0.7, 'angry': -0.7, 'upset': -0.7, 'annoyed': -0.7, 
         'disappointed': -0.7, 'frustrated': -0.6, 'hurt': -0.6, 'anxious': -0.6,
         'worried': -0.6, 'unhappy': -0.6, 'regret': -0.6, 'troubled': -0.6,
+        'mean': -0.7, 'rude': -0.7, 'difficult': -0.6, 'problem': -0.6,
         
         // Mild negative emotions (score: -0.5)
         'bad': -0.5, 'dislike': -0.5, 'meh': -0.5, 'uncomfortable': -0.5,
